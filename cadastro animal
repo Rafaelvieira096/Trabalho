@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Animais</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #3498db, #2ecc71);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px;
+      width: 100%;
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #27ae60;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #ecf0f1;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Cadastro de Animais</h1>
+
+  <input id="id_animal" placeholder="ID do Animal" type="number" />
+  <input id="nome" placeholder="Nome do Animal">
+  <input id="especie" placeholder="Espécie">
+  <input id="raca" placeholder="Raça">
+  <input id="data_nascimento" placeholder="Data de Nascimento" type="date">
+
+  <select id="id_cliente">
+    <option value="">Selecione o Cliente</option>
+  </select>
+
+  <button onclick="cadastrarAnimal()">Cadastrar Animal</button>
+  <button onclick="voltar()">Voltar</button>
+
+  <h2 style="margin-top: 30px;">Animais Cadastrados</h2>
+  <ul id="lista-animais"></ul>
+</div>
+
+<script>
+  async function carregarClientes() {
+    const res = await fetch('/clientes');
+    const clientes = await res.json();
+    const select = document.getElementById('id_cliente');
+    clientes.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = `${c.nome} (ID: ${c.id})`;
+      select.appendChild(option);
+    });
+  }
+
+  async function carregarAnimais() {
+    const res = await fetch('/animais');
+    const animais = await res.json();
+    const lista = document.getElementById('lista-animais');
+    lista.innerHTML = '';
+    animais.forEach(animal => {
+      lista.innerHTML += `<li>
+        <div>
+          <strong>${animal.nome}</strong> - ${animal.especie}, ${animal.raca}, nascimento: ${animal.data_nascimento} (Cliente ID: ${animal.id_cliente})
+        </div>
+      </li>`;
+    });
+  }
+
+  async function cadastrarAnimal() {
+    const id_animal = document.getElementById('id_animal').value.trim();
+    const nome = document.getElementById('nome').value.trim();
+    const especie = document.getElementById('especie').value.trim();
+    const raca = document.getElementById('raca').value.trim();
+    const data_nascimento = document.getElementById('data_nascimento').value;
+    const id_cliente = document.getElementById('id_cliente').value;
+
+    if (!id_animal || !nome || !especie || !raca || !data_nascimento || !id_cliente) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
+    const resposta = await fetch('/animais', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_animal, nome, especie, raca, data_nascimento, id_cliente })
+    });
+
+    const resultado = await resposta.json();
+    if (resultado.status) {
+      alert("Animal cadastrado com sucesso!");
+      document.getElementById('id_animal').value = '';
+      document.getElementById('nome').value = '';
+      document.getElementById('especie').value = '';
+      document.getElementById('raca').value = '';
+      document.getElementById('data_nascimento').value = '';
+      document.getElementById('id_cliente').value = '';
+      carregarAnimais();
+    } else {
+      alert("Erro: " + resultado.erro);
+    }
+  }
+
+  function voltar() {
+    window.location.href = "/";
+  }
+
+  carregarClientes();
+carregarAnimais();
+</script>
+</body>
+</html>
+
+
+
+
