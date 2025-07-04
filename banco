@@ -1,0 +1,183 @@
+from flask import Flask, request, jsonify, render_template
+import psycopg2
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+conn = psycopg2.connect(
+    host="localhost",
+    database="petshop3",
+    user="postgres",
+    password="12345",
+    port=5432
+)
+cursor = conn.cursor()
+
+
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/animais", methods=["GET"])
+def listar_animais():
+    try:
+        cursor.execute("SELECT id_animal, nome, especie, raca, data_nascimento, id_cliente FROM Animal")
+        animais = cursor.fetchall()
+        return jsonify([
+            {
+                "id_animal": a[0],
+                "nome": a[1],
+                "especie": a[2],
+                "raca": a[3],
+                "data_nascimento": a[4].strftime("%Y-%m-%d") if a[4] else None,
+                "id_cliente": a[5]
+            } for a in animais
+        ])
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+@app.route("/animal")
+def animal():
+    return render_template("cadastro_animal.html")
+
+@app.route("/clientes", methods=["GET"])
+def listar_clientes():
+    try:
+        cursor.execute("SELECT id_cliente, nome FROM Cliente")
+        dados = cursor.fetchall()
+        return jsonify([{"id": x[0], "nome": x[1]} for x in dados])
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/animais", methods=["POST"])
+def adicionar_animal():
+    try:
+        data = request.json
+        cursor.execute(
+            """
+            INSERT INTO Animal (id_animal, nome, especie, raca, data_nascimento, id_cliente)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                data["id_animal"],
+                data["nome"],
+                data["especie"],
+                data["raca"],
+                data["data_nascimento"],
+                data["id_cliente"]
+            )
+        )
+        conn.commit()
+        return jsonify({"status": "animal_adicionado"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/buscar")
+def buscar():
+    termo = request.args.get("termo", "")
+    resultados = []
+
+    try:
+        like = f"%{termo}%"
+
+        # Buscar em Cliente
+        cursor.execute("""
+            SELECT nome, telefone, email FROM Cliente
+            WHERE nome ILIKE %s OR telefone ILIKE %s OR email ILIKE %s
+        """, (like, like, like))
+        for row in cursor.fetchall():
+            resultados.append({
+                "tabela": "Cliente",
+                "resultado": f"{row[0]} - {row[1]} - {row[2]}"
+            })
+
+        # Buscar em Animal (nome, especie, raca)
+        cursor.execute("""
+            SELECT nome, especie, raca FROM Animal
+            WHERE nome ILIKE %s OR especie ILIKE %s OR raca ILIKE %s
+        """, (like, like, like))
+        for row in cursor.fetchall():
+            resultados.append({
+                "tabela": "Animal",
+                "resultado": f"{row[0]} - {row[1]} - {row[2]}"
+            })
+
+        # Se tiver outras tabelas como Servico, adicionar mais blocos aqui
+
+        return jsonify(resultados)
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/consulta")
+def consulta():
+    return render_template("consulta.html")
+
+
+@app.route("/dados", methods=["GET"])
+def listar():
+    try:
+        cursor.execute("SELECT * FROM Cliente")
+        dados = cursor.fetchall()
+        return jsonify([
+            {
+                "id_cliente": x[0],
+                "nome": x[1],
+                "telefone": x[2],
+                "email": x[3],
+                "data_cadastro": x[4].strftime("%Y-%m-%d") if x[4] else None
+            } for x in dados
+        ])
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+@app.route("/dados", methods=["POST"])
+def adicionar():
+    try:
+        data = request.json
+        cursor.execute(
+            "INSERT INTO Cliente (nome, telefone, email) VALUES (%s, %s, %s)",
+            (data["nome"], data["telefone"], data["email"])
+        )
+        conn.commit()
+        return jsonify({"status": "adicionado"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+@app.route("/dados/<int:id_cliente>", methods=["DELETE"])
+def remover(id_cliente):
+    try:
+        cursor.execute("DELETE FROM Cliente WHERE id_cliente = %s", (id_cliente,))
+        conn.commit()
+        return jsonify({"status": "removido"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+    
+@app.route("/dados/<int:id_cliente>", methods=["PUT"])
+def editar(id_cliente):
+    try:
+        data = request.json
+        cursor.execute(
+            "UPDATE Cliente SET nome = %s, telefone = %s, email = %s WHERE id_cliente = %s",
+            (data["nome"], data["telefone"], data["email"], id_cliente)
+        )
+        conn.commit()
+        return jsonify({"status": "atualizado"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"erro": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
