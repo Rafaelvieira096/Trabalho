@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta Geral</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #3498db, #2ecc71);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    input {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px;
+      width: 100%;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #ecf0f1;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Consulta Geral</h1>
+    <input id="busca" placeholder="Digite nome, telefone ou email">
+    <button onclick="buscar()">Buscar</button>
+    <ul id="resultados"></ul>
+    <button onclick="voltar()">Voltar para Cadastro</button>
+  </div>
+
+  <script>
+    async function buscar() {
+      const termo = document.getElementById('busca').value.trim();
+      if (!termo) return alert("Digite algo para buscar!");
+
+      const res = await fetch('/buscar?termo=' + encodeURIComponent(termo));
+      const dados = await res.json();
+
+      const lista = document.getElementById('resultados');
+      lista.innerHTML = '';
+
+      if (dados.length === 0) {
+        lista.innerHTML = '<li>Nenhum resultado encontrado.</li>';
+        return;
+      }
+
+      dados.forEach(item => {
+        lista.innerHTML += `<li>
+          <strong>Tabela:</strong> ${item.tabela}<br>
+          <strong>Resultado:</strong> ${item.resultado}
+        </li>`;
+      });
+    }
+
+    function voltar() {
+      window.location.href = "/";
+    }
+  </script>
+</body>
+</html>
